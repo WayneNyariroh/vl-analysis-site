@@ -31,7 +31,7 @@ page_styling()
 #sidebar
 with st.sidebar:
     cal_watch = datetime.datetime.now()
-    st.button(f' :calendar: {cal_watch.strftime("%d/%m/%Y")}', disabled=True)
+    st.button(f'{cal_watch.strftime("%d/%m/%Y")}', disabled=True)
     
     st.subheader('Facility Viral Load Analysis `version 2.0` ')
     st.caption("Analyse your facility's client :green[viral loads] within a few seconds with a simple upload")
@@ -51,7 +51,7 @@ if upload_csv is not None:
     data = load_csv()
 else:
     #what displays while upload hasnt been done yet
-    st.info("Awaiting linhnelist upload for analysis") 
+    st.info("Awaiting **_Active on ART Linelist_** upload for analysis") 
 
 #st.write(data)
 
@@ -69,9 +69,10 @@ def prep_df(data):
                     )
 df = prep_df(data)
 
-st.write(df)
-
-'''
+#the various analysis needed
+#elligible for vl means clients who have been active on an ART regimen 
+#validity of vl - 0-24 years and pmtct vl is valid if done in the last 6 months
+#elligible df to be used for all other analysis
 elligible_df = df[(df.art_start_date < pd.to_datetime(date.today() + relativedelta(months=-3)))]
 
 #place all components within a container
@@ -82,13 +83,12 @@ with st.container():
         st.metric(label="TX_Curr",
                   value=(df.shape[0])
                   )
-    with metric2:
+    with metric3:
         st.metric(label="Active in PMTCT",
                 value=(df[df['active_in_pmtct'].eq('Yes')].shape[0]))
 
-    with metric3:
+    with metric2:
             st.metric(label="Clients Elligible for VL Uptake",
                     value=(elligible_df.shape[0]))
 
-    st.write(df)
-    '''
+    st.write(elligible_df)
