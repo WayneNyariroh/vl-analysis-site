@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit_shadcn_ui as ui
 import pandas as pd
 import altair as alt
 import datetime
@@ -6,7 +7,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 import time
 
-from streamlit_extras.metric_cards import style_metric_cards
+#from streamlit_extras.metric_cards import style_metric_cards
 
 #function to style the page - remove menu, footer and top spacing; set web title, layout
 def page_styling():
