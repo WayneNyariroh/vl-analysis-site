@@ -8,8 +8,6 @@ import datetime
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
-pd.options.display.float_format = '{:,.2f}'.format
-
 #SECTION 1: THE PAGE
 img = "assets\prescription.png"
 
@@ -262,7 +260,7 @@ if upload_linelist_csv is not None:
                                         )
 
             st.altair_chart(summary_chart, use_container_width=True)
-            st.write(f'**:green[vl uptake:]** {((full_valid_df.shape[0]/elligible_df.shape[0])*100)}' + "%")
+            st.write(f'**:green[vl uptake:]** {(np.round(full_valid_df.shape[0]/elligible_df.shape[0], decimals=2)*100)}' + "%")
             
     with vltable:
         with st.container(border=True):
@@ -274,7 +272,7 @@ if upload_linelist_csv is not None:
             summarytable.index.names = ['group','status']
             vlsum = summarytable.reset_index()
             ui.table(vlsum)
-            st.write(f'**:green[suppression rate:]** {((suppressedtable.shape[0]/validtable.shape[0])*100)}' + "%")
+            st.write(f'**:green[suppression rate:]** {(np.round(suppressedtable.shape[0]/validtable.shape[0], decimals=2)*100)}' + "%")
             
     pmtct_valid = validtable.query('active_in_pmtct == "Yes"')
     pmtct_suppressed = pmtct_valid.query('vl_category == "suppressed"')
