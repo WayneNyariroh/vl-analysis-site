@@ -3,6 +3,7 @@ import streamlit as st
 import streamlit_shadcn_ui as ui
 import pandas as pd
 import numpy as np
+import openpyxl
 import altair as alt
 import datetime
 from datetime import date
