@@ -5,6 +5,7 @@ import streamlit_shadcn_ui as ui
 import pandas as pd
 import numpy as np
 import openpyxl
+import xlrd
 import altair as alt
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -345,8 +346,8 @@ if upload_linelist_csv is not None:
         fig.update_xaxes(side="top")
         fig.update_layout(yaxis_title=None)
         
-        st.write("vl suppression for art cohorts")
-        st.caption("clients actively on care who started antiretroviral therapy on the same month of the same year.")
+        st.write("vl suppression for antiretroviral therapy cohorts")
+        st.caption("A cohort is a group of subjects that share a defining characteristic and a cohort has three main attributes: time, size and behaviour. this heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year.")
         st.plotly_chart(fig, use_container_width=True)
         
 #wayne_willis_omondi
