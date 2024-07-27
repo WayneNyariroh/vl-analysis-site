@@ -31,24 +31,25 @@ def page_styling():
     st.markdown(
         """<style>
         .block-container {
-            padding-top: 1rem;}</style>""", unsafe_allow_html=True)
+            padding-top: 3rem;}</style>""", unsafe_allow_html=True)
     
 page_styling()
 
-with st.sidebar:
-#with st.container():
+with st.sidebar:      
+    st.title('Viral Load Analyst `version 1.0` ')
+    st.caption("Analyse facility's :green[viral load indicators] with a just simple linelist upload")
+    st.caption("- 0 t0 24 yrs as well as pmtct vl on 6 month-basis. 25+ on a 12 month-basis.")
+    st.caption("- on ART for less than 3 months considered 'not elligible' for vl uptake.")
+    
+#SECTION 2:THE DATA
+    upload_linelist_csv = st.file_uploader("**Upload today's Active on ART Linelist below (csv only)** ", type=['csv'])
+    #with st.container():
     pic, about = st.columns((1,3))
     with pic:
         ui.avatar(src="https://i.etsystatic.com/38806485/r/il/5fa54b/5521669591/il_570xN.5521669591_25tt.jpg")
     with about:
-        st.markdown('''[wayne willis](https://www.linkedin.com/in/waynewillislink/)''')
-        
-    st.title('Viral Load Analyst `version 1.0` ')
-    st.caption("Analyse facility's :green[viral load indicators] with a just simple linelist upload")
-    st.caption("- 0 t0 24 years as well as pmtct vl on 6 month-basis and 25+ on a 12 month-basis.")
+        st.markdown('''made by [wayne willis](https://www.linkedin.com/in/waynewillislink/)''')
     
-#SECTION 2:THE DATA
-    upload_linelist_csv = st.file_uploader("**Upload today's Active on ART Linelist below (csv only)** ", type=['csv'])
     func = lambda dates: [pd.to_datetime(x) for x in dates]
     
 if upload_linelist_csv is not None:
@@ -61,9 +62,6 @@ if upload_linelist_csv is not None:
                         date_parser = func)
         return df
     data = load_csv()
-    time.sleep(5) 
-    #ui.alert_dialog(show=upload_linelist_csv, title=" ", description="Upload Successfully", confirm_label="OK", key="alert_dialog_1")
-    st.success('Analysis Completed')
     
     data.columns = [x.lower().replace(" ","_") for x in data.columns]
 #upload_pending_csv = st.file_uploader("**2. Upload today's Viral Load and CD4 Lab requests pending Report (csv only)** ", type=['csv'])
@@ -77,6 +75,12 @@ if upload_linelist_csv is not None:
                         next_appointment_date = pd.to_datetime(data.next_appointment_date))
                 )
     linelist = prep_df(data)
+    
+    with st.spinner('Wait for it...'):
+        time.sleep(6)
+    success = st.success("Analysis Completed. Loading Results...")
+    time.sleep(4)
+    success.empty()
     
 #a part of section 1 to get the facility information
     st.write(" ")
@@ -267,7 +271,7 @@ if upload_linelist_csv is not None:
             
             chart = (summary_chart + text_chart).facet(
                 column='age_category', title=alt.Title("vl uptake summary based on defined age categories and sex", color="green",
-                subtitle="viral load status for all clients currently on antirhetroviral therapy. patients who have been on ART for less than 3 months considered 'not elligible'.",
+                subtitle="viral load status for all clients currently on antirhetroviral therapy.",
                 subtitleColor="grey")).configure_header(title=None)
             
             st.altair_chart(chart, use_container_width=True)
@@ -341,15 +345,22 @@ if upload_linelist_csv is not None:
         cohortperc = cohortsuppression.apply(lambda x: x * 100)
         cohortperc = cohortperc.round(2)
         artcohort = cohortperc[['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']]
-
         
-        fig = px.imshow(artcohort, text_auto=True, color_continuous_scale='greens', contrast_rescaling='infer')
+        fig = px.imshow(artcohort, 
+                        text_auto=True, color_continuous_scale='greens', 
+                        contrast_rescaling='infer', aspect='auto')
+        
         fig.update_layout(coloraxis_showscale=False)
         fig.update_xaxes(side="top")
+        fig.update_yaxes(nticks=25)
         fig.update_layout(yaxis_title=None)
+        fig.update_xaxes(showgrid=False)
+        fig.update_yaxes(showgrid=False)
+        fig.update_traces(xgap=1)
+        fig.update_traces(ygap=1)
         
-        st.write("**:green[vl suppression for antiretroviral therapy cohorts]**")
-        st.caption("A cohort is a group of subjects that share a defining characteristic and a cohort has three main attributes: time, size and behaviour. this heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values in the plot are all represented in terms of percentages of those suppressed.")
+        st.write("**:green[ART cohort suppression rates (%)]**")
+        st.caption("A **cohort** is a group of subjects that share a defining characteristic and a cohort has three main attributes: _time_, _size_ and _behaviour_. This heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values in the plot are all represented in terms of percentages of those suppressed.")
         st.plotly_chart(fig, use_container_width=True)
         
 #wayne_willis_omondi
