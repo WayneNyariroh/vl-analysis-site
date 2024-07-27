@@ -340,14 +340,16 @@ if upload_linelist_csv is not None:
         
         cohortperc = cohortsuppression.apply(lambda x: x * 100)
         cohortperc = cohortperc.round(2)
+        artcohort = cohortperc[['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']]
+
         
-        fig = px.imshow(cohortperc, text_auto=True, color_continuous_scale='greens', contrast_rescaling='infer')
+        fig = px.imshow(artcohort, text_auto=True, color_continuous_scale='greens', contrast_rescaling='infer')
         fig.update_layout(coloraxis_showscale=False)
         fig.update_xaxes(side="top")
         fig.update_layout(yaxis_title=None)
         
-        st.write("vl suppression for antiretroviral therapy cohorts")
-        st.caption("A cohort is a group of subjects that share a defining characteristic and a cohort has three main attributes: time, size and behaviour. this heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year.")
+        st.write("**:green[vl suppression for antiretroviral therapy cohorts]**")
+        st.caption("A cohort is a group of subjects that share a defining characteristic and a cohort has three main attributes: time, size and behaviour. this heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values in the plot are all represented in terms of percentages of those suppressed.")
         st.plotly_chart(fig, use_container_width=True)
         
 #wayne_willis_omondi
