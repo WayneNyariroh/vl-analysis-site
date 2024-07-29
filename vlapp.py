@@ -371,7 +371,7 @@ if upload_linelist_csv is not None:
         fig.update_traces(ygap=1)
         
         st.write("**:green[ART cohort suppression rates (%)]**")
-        st.caption("A **cohort** is a group of subjects that share a defining characteristic and a cohort has three main attributes: **_time_**, **_size_** and **_behaviour_**. This heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values represented in terms of percentages of those suppressed i.e., :green[**_the percentage of ART patients within the cohort with a valid documented viral load (VL) result that is below <200 copies/ml._**]")
+        st.caption("A **cohort** is a group of subjects that share a defining characteristic and a cohort has three main attributes: **_time_**, **_size_** and **_behaviour_**. This heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values represented in terms of percentages of those suppressed i.e., **_the percentage of ART patients within the cohort with a valid documented viral load (VL) result that is below <200 copies/ml._**")
         st.plotly_chart(fig, use_container_width=True)
         
 #wayne_willis_omondi
