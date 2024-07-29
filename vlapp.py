@@ -7,7 +7,6 @@ import numpy as np
 import openpyxl
 import xlrd
 import altair as alt
-import matplotlib.pyplot as plt
 import plotly.express as px
 import datetime
 import time
@@ -19,7 +18,7 @@ img = "assets\prescription.png"
 
 def page_styling():
     st.set_page_config(
-        page_title="wayne: facility viral load analyst",
+        page_title="wynlabs: facility viral load analyst",
         page_icon=img,
         layout="wide",
         initial_sidebar_state="expanded")
@@ -36,13 +35,12 @@ def page_styling():
 page_styling()
 
 with st.sidebar:      
-    st.title('Viral Load Analyst `version 1.0` ')
-    st.caption("Analyse facility's :green[viral load indicators] with a just simple linelist upload")
-    st.caption("- 0 t0 24 yrs as well as pmtct vl on 6 month-basis. 25+ on a 12 month-basis.")
-    st.caption("- on ART for less than 3 months considered 'not elligible' for vl uptake.")
+    st.title(' :bar_chart: VL_Analyst `v1.2` ')
+    st.subheader("Analyse facility's :green[viral load indicators] with a just simple linelist upload.")
+    st.caption("> :memo: **Note:** Those on ART for a period less than 3 months considered 'not elligible' for vl uptake. For 0 t0 24 yrs as well as pmtct; vl validity on 6 month-basis; and 25+ on a 12 month-basis.")
     
 #SECTION 2:THE DATA
-    upload_linelist_csv = st.file_uploader("**Upload today's Active on ART Linelist below (csv only)** ", type=['csv'])
+    upload_linelist_csv = st.file_uploader("**Upload latest CSV Linelist from EMR** ", type=['csv'])
     #with st.container():
     pic, about = st.columns((1,3))
     with pic:
@@ -50,7 +48,7 @@ with st.sidebar:
     with about:
         st.markdown('''made by [wayne willis](https://www.linkedin.com/in/waynewillislink/)''')
     
-    func = lambda dates: [pd.to_datetime(x) for x in dates]
+    #func = lambda dates: [pd.to_datetime(x) for x in dates]
     
 if upload_linelist_csv is not None:
     #@st.cache_data
@@ -59,13 +57,11 @@ if upload_linelist_csv is not None:
                         usecols=['MFL Code','CCC No', 'Sex', 'Age at reporting','Art Start Date',
                                  'Last VL Result','Last VL Date', 'Active in PMTCT','Next Appointment Date'],
                         parse_dates=['Art Start Date','Last VL Date','Next Appointment Date'],
-                        date_parser = func)
+                     dayfirst=True)
         return df
     data = load_csv()
     
     data.columns = [x.lower().replace(" ","_") for x in data.columns]
-#upload_pending_csv = st.file_uploader("**2. Upload today's Viral Load and CD4 Lab requests pending Report (csv only)** ", type=['csv'])
-#ui.alert_dialog(show=upload_csv, title=" ", description="Upload Successfully", confirm_label="OK", key="alert_dialog_1")
 
     def prep_df(data):
         return (data
@@ -76,11 +72,16 @@ if upload_linelist_csv is not None:
                 )
     linelist = prep_df(data)
     
-    with st.spinner('Wait for it...'):
-        time.sleep(6)
-    success = st.success("Analysis Completed. Loading Results...")
-    time.sleep(4)
+    with st.spinner(':wink: Hesabu mingi is happening kwa jikoni. Rit matin...'):
+        time.sleep(8)
+    success = st.success(":heavy_check_mark: Analysis Completed. Loading Results...")
+    time.sleep(6)
     success.empty()
+    msg = st.toast(':blush: Here you go...')
+    time.sleep(4)
+    msg.toast("Happy tidings, traveller :muscle: to infinity and beyond.")
+    time.sleep(2)
+    msg.empty()
     
 #a part of section 1 to get the facility information
     st.write(" ")
@@ -123,7 +124,7 @@ if upload_linelist_csv is not None:
             page_calendar = datetime.datetime.now()
             st.write(f':green[**_Date:_**]{datetime.datetime.now().strftime("  %a ")}'+ f'{page_calendar.strftime("    %Y, %b %d   ")}')
 
-    #SCETION 3: ANALYTICS
+    #SCETION 3: FEATURE ENGINEERING AND ANALYTICS
     linelist.drop(['mfl_code'], axis=1, inplace=True)
     linelist_copy = linelist.copy()
     
@@ -214,23 +215,23 @@ if upload_linelist_csv is not None:
         with metric1:
             ui.metric_card(title="Active on ART",
                     content=(linelist.shape[0]),
-                    description="adults and children currently on antiretroviral therapy")
+                    description="adults & children active on antiretroviral therapy")
         with metric2:
             ui.metric_card(title="Elligible for VL",
                     content=(elligible_df.shape[0]),
                     description="active clients on ART for a period more than 3 mnths")
-        with metric4:
+        with metric5:
             ui.metric_card(title="TX_PVLS (N)",
                     content=(validtable.query('vl_category == "suppressed"').shape[0]),
                     description="valid documented viral loads below 200copies/ml")
         with metric3:
             ui.metric_card(title="TX_PVLS (D)",
                     content=(full_valid_df.shape[0]),
-                    description="elligible clients with a valid documented viral result")
-        with metric5:
-            ui.metric_card(title="Due For Repeat VL",
-                    content=(due_for_repeat.shape[0]),
-                    description="high vl clients due for repeat vl i.e. 3 mnths since result") 
+                    description="elligible clients with a valid documented vl result")
+        with metric4:
+            ui.metric_card(title="Invalid VLs",
+                    content=(pivot_linelist.query('validity == "invalid"').shape[0]),
+                    description="elligible clients with no valid documented vl result") 
         with downloads:
             def df_to_csv(df):
                 header = ["ccc_no", "sex", "age_at_reporting", "active_in_pmtct",
@@ -241,7 +242,7 @@ if upload_linelist_csv is not None:
             repeat_csv = df_to_csv(due_for_repeat)
             
             with st.container():
-                st.write("Click to download")
+                st.write(" Download results below:")
                 st.download_button(
                     label="**_Full VL Analysis Results_**",
                     data=final_analysis_csv,
@@ -263,7 +264,7 @@ if upload_linelist_csv is not None:
             summary_chart = alt.Chart(pivot_linelist).mark_bar(cornerRadiusTopLeft=4,cornerRadiusTopRight=4).encode(
                 alt.X('validity', title=""), 
                 alt.Y('count()', title=""),
-                alt.Color('sex:O', scale=alt.Scale(scheme='greens'),legend=alt.Legend(orient="top", title=""))).properties(width=110, height=255)
+                alt.Color('sex:O', scale=alt.Scale(scheme='greens'),legend=alt.Legend(orient="top", title=""))).properties(width=110, height=250)
             
             text_chart = alt.Chart(pivot_linelist).mark_text(
                 align="center", baseline="middle",dx=1, dy=-7,
@@ -285,7 +286,7 @@ if upload_linelist_csv is not None:
                     total=('ccc_no','count'))
             summarytable.index.names = ['group','status']
             vlsum = summarytable.reset_index()
-            st.caption("suppression status for all valid clients based on 200copies/ml cuttoff grouped based on age categories")
+            st.caption("**suppression status for all valid clients based on 200copies/ml cuttoff grouped based on age categories.**")
             ui.table(vlsum)
             st.write(f'**:green[suppression rate:]** {(np.round(suppressedtable.shape[0]/validtable.shape[0], decimals=2)*100)}' + "%")
             
@@ -297,34 +298,44 @@ if upload_linelist_csv is not None:
         genders = pivot_linelist['sex'].unique().tolist()
         pmtct_status = pivot_linelist['active_in_pmtct'].unique().tolist()
         
-        age_range = st.slider('**Use slider to select any desired age range:**',
+        age_range = st.slider('**move sliders to select desired age range:**',
                               min_value=min(age_at_reporting),
                               max_value=max(age_at_reporting),
                               value=(min(age_at_reporting),max(age_at_reporting)))
-        gender_selection = st.multiselect('**Sex:**', genders, default=genders)
-        pmtct_selection = st.multiselect('**Enrolled in PMTCT:**', pmtct_status, default=pmtct_status)
         
-        selection = ((pivot_linelist['age_at_reporting'].between(*age_range)) & (pivot_linelist['sex'].isin(gender_selection)) & (pivot_linelist['active_in_pmtct'].isin(pmtct_selection)))
-        data_display = pivot_linelist[selection]
+        selections, dataframe = st.columns((1,3))
         
-        records_found = data_display.shape[0]
-        elligible_found = (data_display.query('elligibility_status == "elligible"')).shape[0]
-        valid_found = (data_display.query('validity == "valid"')).shape[0]
-        invalid_found = (data_display.query('validity == "invalid"')).shape[0]
-        suppressed_found = (data_display.query('validity == "valid"').query('vl_category == "suppressed"')).shape[0]
-        unsuppressed_found = (data_display.query('validity == "valid"').query('vl_category == "unsuppressed"')).shape[0]
+        with selections:
+            gender_selection = st.multiselect('**Sex:**', genders, default=genders)
+            pmtct_selection = st.multiselect('**Enrolled in PMTCT:**', pmtct_status, default=pmtct_status)
+        
+            selection = ((pivot_linelist['age_at_reporting'].between(*age_range)) & (pivot_linelist['sex'].isin(gender_selection)) & (pivot_linelist['active_in_pmtct'].isin(pmtct_selection)))
+            data_display = pivot_linelist[selection]
+            
+            records_found = data_display.shape[0]
+            elligible_found = (data_display.query('elligibility_status == "elligible"')).shape[0]
+            valid_found = (data_display.query('validity == "valid"')).shape[0]
+            invalid_found = (data_display.query('validity == "invalid"')).shape[0]
+            suppressed_found = (data_display.query('validity == "valid"').query('vl_category == "suppressed"')).shape[0]
+            unsuppressed_found = (data_display.query('validity == "valid"').query('vl_category == "unsuppressed"')).shape[0]
 
-        st.write(f'{records_found} clients found within selection. {elligible_found} are elligible for vl; {valid_found} with valid vls; {invalid_found} invalid; {suppressed_found} suppressed; and {unsuppressed_found} unsuppressed')
-        st.dataframe(data_display[['ccc_no','sex','age_at_reporting','art_start_date', 'elligibility_status','last_vl_result','last_vl_date','validity','vl_category','next_appointment_date']],
-                     hide_index=True, use_container_width=True)
+            st.write(f'{records_found} clients found within selection.')
+            st.write(f'{elligible_found} are elligible for vl')
+            st.write(f'{valid_found} with valid vls; {invalid_found} invalid')
+            st.write(f'{suppressed_found} suppressed; and {unsuppressed_found} unsuppressed')
         
-        selection_csv = df_to_csv(data_display)
+            selection_csv = df_to_csv(data_display)
+            
+            st.download_button(
+                label="**_download selected data_**",
+                data=selection_csv,
+                file_name=f'{facility_name} age selection data {date.today().strftime("%d-%m-%Y")}.csv', 
+                mime="text/csv")
+            
+        with dataframe:
+            st.dataframe(data_display[['ccc_no','sex','age_at_reporting','art_start_date', 'elligibility_status','last_vl_result','last_vl_date','validity','vl_category','next_appointment_date']],
+                     hide_index=True, use_container_width=True, height=400)
         
-        st.download_button(
-            label="**_download selected data_**",
-            data=selection_csv,
-            file_name=f'{facility_name} age selection data {date.today().strftime("%d-%m-%Y")}.csv', 
-            mime="text/csv")
     with st.container(border=True):
         pivot_linelist['art_cohort_year']= pivot_linelist.art_start_date.dt.year
         pivot_linelist['art_cohort_month']= pivot_linelist.art_start_date.dt.month_name()
@@ -360,7 +371,7 @@ if upload_linelist_csv is not None:
         fig.update_traces(ygap=1)
         
         st.write("**:green[ART cohort suppression rates (%)]**")
-        st.caption("A **cohort** is a group of subjects that share a defining characteristic and a cohort has three main attributes: _time_, _size_ and _behaviour_. This heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values in the plot are all represented in terms of percentages of those suppressed.")
+        st.caption("A **cohort** is a group of subjects that share a defining characteristic and a cohort has three main attributes: **_time_**, **_size_** and **_behaviour_**. This heatmap represents clients, actively on care, who started antiretroviral therapy on the same month of the same year. Values represented in terms of percentages of those suppressed i.e., :green[**_the percentage of ART patients within the cohort with a valid documented viral load (VL) result that is below <200 copies/ml._**]")
         st.plotly_chart(fig, use_container_width=True)
         
 #wayne_willis_omondi
