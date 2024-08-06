@@ -35,31 +35,26 @@ def page_styling():
 page_styling()
 
 with st.sidebar:      
-    st.title(' :bar_chart: VL_Analyst `v1.2` ')
+    st.title(' :bar_chart: VL_Analyst `v2.0` ')
     st.subheader("Analyse facility's :green[viral load indicators] with a just simple linelist upload.")
     st.caption("> :memo: **Note:** Those on ART for a period less than 3 months considered 'not elligible' for vl uptake. For 0 t0 24 yrs as well as pmtct; vl validity on 6 month-basis; and 25+ on a 12 month-basis.")
     
 #SECTION 2:THE DATA
-    upload_linelist_csv = st.file_uploader("**Upload latest CSV Linelist from EMR** ", type=['csv'])
-    #with st.container():
+    upload_linelist_csv = st.file_uploader("**1. Upload _Active on ART Patients Linelist_ CSV** ", type=['csv'])
+    
+    upload_pending_csv = st.file_uploader("**2. Upload _Viral Load and CD4 Lab requests pending Results_ CSV**", type=['csv'])
     pic, about = st.columns((1,3))
     with pic:
-        ui.avatar(src="https://i.etsystatic.com/38806485/r/il/5fa54b/5521669591/il_570xN.5521669591_25tt.jpg")
+        ui.avatar(src="https://www.centreofexcellence.com/media/image/c4/7a/de69537298bc64a96585a0df223c.jpeg")
     with about:
         st.markdown('''made by [wayne willis](https://www.linkedin.com/in/waynewillislink/)''')
     
-    #func = lambda dates: [pd.to_datetime(x) for x in dates]
-    
 if upload_linelist_csv is not None:
-    #@st.cache_data
-    def load_csv():
-        df = pd.read_csv(upload_linelist_csv, 
-                        usecols=['MFL Code','CCC No', 'Sex', 'Age at reporting','Art Start Date',
-                                 'Last VL Result','Last VL Date', 'Active in PMTCT','Next Appointment Date'],
-                        parse_dates=['Art Start Date','Last VL Date','Next Appointment Date'],
-                     dayfirst=True)
-        return df
-    data = load_csv()
+    df = pd.read_csv(upload_linelist_csv,
+                    usecols=['MFL Code','CCC No', 'Sex', 'Age at reporting','Art Start Date','Last VL Result','Last VL Date', 'Active in PMTCT','Next Appointment Date'],
+                    parse_dates=['Art Start Date','Last VL Date','Next Appointment Date'], 
+                    dayfirst=True)
+    data = df
     
     data.columns = [x.lower().replace(" ","_") for x in data.columns]
 
@@ -71,16 +66,33 @@ if upload_linelist_csv is not None:
                         next_appointment_date = pd.to_datetime(data.next_appointment_date))
                 )
     linelist = prep_df(data)
-    
+
+if upload_pending_csv is not None:
+    pendingdf = (pd
+                 .read_csv(upload_pending_csv,
+                            usecols=['Unique Patient Number','Age', 'Sex', 'VL Order Date'],
+                            parse_dates=['VL Order Date'],
+                            dayfirst=True)
+                 .rename(columns=str.lower)
+                 .rename(columns = {"unique patient number":"ccc_no",
+                                    "vl order date":"vl_order_date"}))
+    def prepdf(pendingdf):
+        return (pendingdf
+                .assign(vl_order_date = pd.to_datetime(pendingdf.vl_order_date),
+                        ccc_no = pendingdf.ccc_no.astype(str)))
+        
+    pendingdf = prepdf(pendingdf)
+            
+    pendingresults = pendingdf[(pendingdf.vl_order_date >= pd.to_datetime(date.today() + relativedelta(months=-3)))]
+    pendingresults = pendingresults.assign(order_status = "pending results")
+
     with st.spinner(':wink: Hesabu mingi is happening kwa jikoni. Rit matin...'):
-        time.sleep(8)
+        time.sleep(6)
     success = st.success(":heavy_check_mark: Analysis Completed. Loading Results...")
     time.sleep(6)
     success.empty()
     msg = st.toast(':blush: Here you go...')
-    time.sleep(4)
-    msg.toast("Happy tidings, traveller :muscle: to infinity and beyond.")
-    time.sleep(2)
+    time.sleep(3)
     msg.empty()
     
 #a part of section 1 to get the facility information
@@ -207,10 +219,12 @@ if upload_linelist_csv is not None:
     pmtct_suppressed = pmtct_valid.query('vl_category == "suppressed"')
     
     pivot_linelist = pivot_linelist.replace(0, "LDL")
+    
+    vl_status = pivot_linelist.merge(pendingresults[["ccc_no","order_status"]], on=["ccc_no"], how='left')
                         
     #SECTION 4: VISUALIZATIONS
     with st.container():
-        metric1,metric2,metric3,metric4,metric5,downloads = st.columns(6)
+        metric1,metric2,metric3,metric4,metric5,metric6 = st.columns(6)
         
         with metric1:
             ui.metric_card(title="Active on ART",
@@ -220,10 +234,6 @@ if upload_linelist_csv is not None:
             ui.metric_card(title="Elligible for VL",
                     content=(elligible_df.shape[0]),
                     description="active clients on ART for a period more than 3 mnths")
-        with metric5:
-            ui.metric_card(title="TX_PVLS (N)",
-                    content=(validtable.query('vl_category == "suppressed"').shape[0]),
-                    description="valid documented viral loads below 200copies/ml")
         with metric3:
             ui.metric_card(title="TX_PVLS (D)",
                     content=(full_valid_df.shape[0]),
@@ -232,31 +242,61 @@ if upload_linelist_csv is not None:
             ui.metric_card(title="Invalid VLs",
                     content=(pivot_linelist.query('validity == "invalid"').shape[0]),
                     description="elligible clients with no valid documented vl result") 
-        with downloads:
-            def df_to_csv(df):
-                header = ["ccc_no", "sex", "age_at_reporting", "active_in_pmtct",
-                          "elligibility_status", "validity", "vl_category", "last_vl_date", "next_appointment_date"]
-                return df.to_csv(index=False, columns=header).encode("utf-8")
-                    
-            final_analysis_csv = df_to_csv(pivot_linelist)
-            repeat_csv = df_to_csv(due_for_repeat)
+        with metric5:
+            ui.metric_card(title="Pending Results",
+                    content=(vl_status.query('validity == "invalid"').query('order_status == "pending results"').shape[0]),
+                    description="Invalid but with an active sample collected in EMR")
+        with metric6:
+            ui.metric_card(title="TX_PVLS (N)",
+                    content=(validtable.query('vl_category == "suppressed"').shape[0]),
+                    description="valid documented viral loads below 200copies/ml")
             
-            with st.container():
-                st.write(" Download results below:")
-                st.download_button(
-                    label="**_Full VL Analysis Results_**",
-                    data=final_analysis_csv,
-                    file_name=f'{facility_name} VL_Analysis {date.today().strftime("%d-%m-%Y")}.csv', 
-                    mime="text/csv")
-                st.download_button(
-                    label="**_Suppression Pivot Table_**",
-                    data=(((pivot_linelist
-                            .query('elligibility_status == "elligible"')
-                            .query('validity == "valid"')
-                            ).groupby(['age_category','active_in_pmtct','vl_category'])['vl_category'].count()).to_csv()),
-                    file_name=f'{facility_name} Suppression Table {date.today().strftime("%d-%m-%Y")}.csv', 
-                    mime="text/csv")
+    with st.container():
+        def df_to_csv(df):
+            header = ["ccc_no", "sex", "age_at_reporting", "active_in_pmtct",
+                        "elligibility_status", "validity", "vl_category","last_vl_date", "next_appointment_date", "order_status"]
+            return df.to_csv(index=False, columns=header).encode("utf-8")
                 
+        final_analysis_csv = df_to_csv(vl_status)
+        invalids = vl_status[vl_status.validity.eq("invalid")]
+        
+        dwnldtext, dwnld1, dwnld2, dwnld3, dwnld4, dwnld5 = st.columns(6)
+        with dwnldtext:
+            st.write(" Download Analytics results :")
+        with dwnld1:
+            st.download_button(
+                label="**_Full VL Analysis Results_**",
+                data=final_analysis_csv,
+                file_name=f'{facility_name} VL_Analysis {date.today().strftime("%d-%m-%Y")}.csv', 
+                mime="text/csv")
+        with dwnld2:
+            st.download_button(
+                label="**_Suppression Pivot Table_**",
+                data=(((pivot_linelist
+                        .query('elligibility_status == "elligible"')
+                        .query('validity == "valid"')
+                        ).groupby(['age_category','active_in_pmtct','vl_category'])['vl_category'].count()).to_csv()),
+                file_name=f'{facility_name} Suppression Table {date.today().strftime("%d-%m-%Y")}.csv', 
+                mime="text/csv")
+        with dwnld3:
+            st.download_button(
+                label="**_PMTCT Client VL_**",
+                data=(vl_status.query('active_in_pmtct == "Yes"').to_csv()),
+                file_name=f'{facility_name} Suppression Table {date.today().strftime("%d-%m-%Y")}.csv', 
+                mime="text/csv")
+        with dwnld4:
+            st.download_button(
+                label="**_Invalid with Pending Results_**",
+                data=(vl_status.query('validity == "invalid"').query('order_status == "pending results"')).to_csv(),
+                file_name=f'{facility_name} Invalid to be bled {date.today().strftime("%d-%m-%Y")}.csv',
+                mime="text/csv")      
+        with dwnld5:
+            st.download_button(
+                label="**_Invalid with No Pending_**",
+                data=(invalids[invalids.order_status.isnull()]).to_csv(),
+                file_name=f'{facility_name} Invalid to be bled {date.today().strftime("%d-%m-%Y")}.csv',
+                mime="text/csv")
+            
     valchart, vltable = st.columns((2,1))
     
     with valchart:
@@ -294,9 +334,9 @@ if upload_linelist_csv is not None:
     pmtct_suppressed = pmtct_valid.query('vl_category == "suppressed"')
     
     with st.container(border=True):
-        age_at_reporting = pivot_linelist['age_at_reporting'].unique().tolist()
-        genders = pivot_linelist['sex'].unique().tolist()
-        pmtct_status = pivot_linelist['active_in_pmtct'].unique().tolist()
+        age_at_reporting = vl_status['age_at_reporting'].unique().tolist()
+        genders = vl_status['sex'].unique().tolist()
+        pmtct_status = vl_status['active_in_pmtct'].unique().tolist()
         
         age_range = st.slider('**move sliders to select desired age range:**',
                               min_value=min(age_at_reporting),
@@ -309,19 +349,21 @@ if upload_linelist_csv is not None:
             gender_selection = st.multiselect('**Sex:**', genders, default=genders)
             pmtct_selection = st.multiselect('**Enrolled in PMTCT:**', pmtct_status, default=pmtct_status)
         
-            selection = ((pivot_linelist['age_at_reporting'].between(*age_range)) & (pivot_linelist['sex'].isin(gender_selection)) & (pivot_linelist['active_in_pmtct'].isin(pmtct_selection)))
-            data_display = pivot_linelist[selection]
+            selection = ((vl_status['age_at_reporting'].between(*age_range)) & (vl_status['sex'].isin(gender_selection)) & (vl_status['active_in_pmtct'].isin(pmtct_selection)))
+            data_display = vl_status[selection]
             
             records_found = data_display.shape[0]
             elligible_found = (data_display.query('elligibility_status == "elligible"')).shape[0]
             valid_found = (data_display.query('validity == "valid"')).shape[0]
             invalid_found = (data_display.query('validity == "invalid"')).shape[0]
+            pending_found = (data_display.query('validity == "invalid"').query('order_status == "pending results"')).shape[0]
             suppressed_found = (data_display.query('validity == "valid"').query('vl_category == "suppressed"')).shape[0]
             unsuppressed_found = (data_display.query('validity == "valid"').query('vl_category == "unsuppressed"')).shape[0]
 
             st.write(f'{records_found} clients found within selection.')
             st.write(f'{elligible_found} are elligible for vl')
-            st.write(f'{valid_found} with valid vls; {invalid_found} invalid')
+            st.write(f'{valid_found} with valid vls')
+            st.write(f'{invalid_found} invalid with {pending_found} pending results')
             st.write(f'{suppressed_found} suppressed; and {unsuppressed_found} unsuppressed')
         
             selection_csv = df_to_csv(data_display)
@@ -333,7 +375,7 @@ if upload_linelist_csv is not None:
                 mime="text/csv")
             
         with dataframe:
-            st.dataframe(data_display[['ccc_no','sex','age_at_reporting','art_start_date', 'elligibility_status','last_vl_result','last_vl_date','validity','vl_category','next_appointment_date']],
+            st.dataframe(data_display[['ccc_no','sex','age_at_reporting','art_start_date', 'elligibility_status','last_vl_result','last_vl_date','validity','vl_category','order_status']],
                      hide_index=True, use_container_width=True, height=400)
         
     with st.container(border=True):
