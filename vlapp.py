@@ -259,7 +259,7 @@ if upload_pending_csv is not None:
                 
         final_analysis_csv = df_to_csv(vl_status)
         invalids = vl_status[vl_status.validity.eq("invalid")]
-        
+        invalids_to_bled = invalids[invalids.order_status.isnull()]
         dwnldtext, dwnld1, dwnld2, dwnld3, dwnld4, dwnld5 = st.columns(6)
         with dwnldtext:
             st.write(":green[**Download Analytics Results :**]")
@@ -275,25 +275,25 @@ if upload_pending_csv is not None:
                 data=(((pivot_linelist
                         .query('elligibility_status == "elligible"')
                         .query('validity == "valid"')
-                        ).groupby(['age_category','active_in_pmtct','vl_category'])['vl_category'].count()).to_csv()),
+                        ).groupby(['age_category','active_in_pmtct','vl_category'])['vl_category'].count()).to_csv(index=False)),
                 file_name=f'{facility_name} Suppression Table {date.today().strftime("%d-%m-%Y")}.csv', 
                 mime="text/csv")
         with dwnld3:
             st.download_button(
                 label="**_PMTCT Client VL Indicators_**",
-                data=(vl_status.query('active_in_pmtct == "Yes"').to_csv()),
+                data=(vl_status.query('active_in_pmtct == "Yes"').to_csv(index=False)),
                 file_name=f'{facility_name} PMTCT Client VL Status {date.today().strftime("%d-%m-%Y")}.csv', 
                 mime="text/csv")
         with dwnld4:
             st.download_button(
                 label="**_Invalid with Pending Results_**",
-                data=(vl_status.query('validity == "invalid"').query('order_status == "pending results"')).to_csv(),
+                data=(vl_status.query('validity == "invalid"').query('order_status == "pending results"')).to_csv(index=False),
                 file_name=f'{facility_name} Invalid Pending Results {date.today().strftime("%d-%m-%Y")}.csv',
                 mime="text/csv")      
         with dwnld5:
             st.download_button(
                 label="**_Invalid with No Pending Results_**",
-                data=(invalids[invalids.order_status.isnull()]).to_csv(),
+                data=invalids_to_bled.to_csv(index=False),
                 file_name=f'{facility_name} Invalid to be bled {date.today().strftime("%d-%m-%Y")}.csv',
                 mime="text/csv")
             
