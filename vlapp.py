@@ -262,7 +262,7 @@ if upload_pending_csv is not None:
         
         dwnldtext, dwnld1, dwnld2, dwnld3, dwnld4, dwnld5 = st.columns(6)
         with dwnldtext:
-            st.write(" Download Analytics results :")
+            st.write("**Download Analytics Results :**")
         with dwnld1:
             st.download_button(
                 label="**_Full VL Analysis Results_**",
